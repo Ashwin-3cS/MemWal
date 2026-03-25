@@ -1007,3 +1007,109 @@ pub async fn sponsor_execute_proxy(
         .body(Body::from(resp_body))
         .unwrap())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_config(api_base: &str, api_key: Option<&str>) -> Config {
+        Config {
+            port: 0,
+            database_url: String::new(),
+            sui_rpc_url: String::new(),
+            memwal_account_id: None,
+            openai_api_key: api_key.map(String::from),
+            openai_api_base: api_base.to_string(),
+            walrus_publisher_url: String::new(),
+            walrus_aggregator_url: String::new(),
+            sui_private_key: None,
+            sui_private_keys: vec![],
+            package_id: String::new(),
+            registry_id: String::new(),
+            sidecar_url: String::new(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_generate_embedding_empty_data_returns_error() {
+        // Simulate an embedding API returning 200 OK with empty data array.
+        // Before the fix this panicked via .unwrap() on an empty iterator;
+        // after the fix it returns AppError::Internal gracefully.
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/embeddings")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"data":[]}"#)
+            .create_async()
+            .await;
+
+        let client = reqwest::Client::new();
+        let config = test_config(&server.url(), Some("sk-fake"));
+        let result = generate_embedding(&client, &config, "test input").await;
+
+        assert!(result.is_err(), "Expected error when embedding API returns empty data");
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, AppError::Internal(ref msg) if msg.contains("no data")),
+            "Expected AppError::Internal mentioning 'no data', got: {err}"
+        );
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn test_generate_embedding_valid_response() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/embeddings")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"data":[{"embedding":[0.1,0.2,0.3]}]}"#)
+            .create_async()
+            .await;
+
+        let client = reqwest::Client::new();
+        let config = test_config(&server.url(), Some("sk-fake"));
+        let result = generate_embedding(&client, &config, "test input").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), vec![0.1, 0.2, 0.3]);
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn test_generate_embedding_api_error_status() {
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("POST", "/embeddings")
+            .with_status(429)
+            .with_body("rate limited")
+            .create_async()
+            .await;
+
+        let client = reqwest::Client::new();
+        let config = test_config(&server.url(), Some("sk-fake"));
+        let result = generate_embedding(&client, &config, "test input").await;
+
+        assert!(result.is_err());
+        assert!(
+            matches!(result.unwrap_err(), AppError::Internal(ref msg) if msg.contains("429"))
+        );
+        mock.assert_async().await;
+    }
+
+    #[tokio::test]
+    async fn test_generate_embedding_mock_fallback() {
+        // Without an API key the function uses a deterministic hash-based mock.
+        let client = reqwest::Client::new();
+        let config = test_config("http://unused", None);
+        let result = generate_embedding(&client, &config, "hello world").await;
+
+        assert!(result.is_ok());
+        let vector = result.unwrap();
+        assert_eq!(vector.len(), 1536);
+
+        let result2 = generate_embedding(&client, &config, "hello world").await.unwrap();
+        assert_eq!(vector, result2, "mock embedding must be deterministic");
+    }
+}
