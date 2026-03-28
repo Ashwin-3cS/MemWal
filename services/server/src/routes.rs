@@ -19,6 +19,8 @@ use crate::db::VectorDb;
 struct EmbeddingApiRequest {
     model: String,
     input: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dimensions: Option<u32>,
 }
 
 /// OpenAI-compatible embedding response
@@ -39,18 +41,21 @@ async fn generate_embedding(
     config: &Config,
     text: &str,
 ) -> Result<Vec<f32>, AppError> {
-    match &config.openai_api_key {
+    let effective_key = config.embedding_api_key.as_ref().or(config.openai_api_key.as_ref());
+    match effective_key {
         Some(api_key) => {
             // Real embedding via OpenRouter/OpenAI-compatible API
-            let url = format!("{}/embeddings", config.openai_api_base);
+            let base = config.embedding_api_base.as_deref().unwrap_or(&config.openai_api_base);
+            let url = format!("{}/embeddings", base);
 
             let resp = client
                 .post(&url)
                 .header("Authorization", format!("Bearer {}", api_key))
                 .header("Content-Type", "application/json")
                 .json(&EmbeddingApiRequest {
-                    model: "openai/text-embedding-3-small".to_string(),
+                    model: config.embedding_model.clone(),
                     input: text.to_string(),
+                    dimensions: config.embedding_dimensions,
                 })
                 .send()
                 .await
@@ -514,7 +519,7 @@ async fn extract_facts_llm(
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
         .json(&ChatCompletionRequest {
-            model: "openai/gpt-4o-mini".to_string(),
+            model: config.llm_model.clone(),
             messages: vec![
                 ChatMessage {
                     role: "system".to_string(),
@@ -682,7 +687,7 @@ pub async fn ask(
         .header("Authorization", format!("Bearer {}", api_key))
         .header("Content-Type", "application/json")
         .json(&ChatCompletionRequest {
-            model: "openai/gpt-4o-mini".to_string(),
+            model: state.config.llm_model.clone(),
             messages: vec![
                 ChatMessage { role: "system".to_string(), content: system_prompt },
                 ChatMessage { role: "user".to_string(), content: body.question.clone() },
