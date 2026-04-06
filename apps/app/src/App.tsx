@@ -109,7 +109,7 @@ function RegisterEnokiWallets() {
     const { unregister } = registerEnokiWallets({
       apiKey: config.enokiApiKey,
       providers: {
-        google: { clientId: config.googleClientId },
+        google: { clientId: config.googleClientId, redirectUrl: window.location.origin },
       },
       client,
       network,

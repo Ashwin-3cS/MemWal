@@ -7,7 +7,7 @@
 export const OAUTH_PROVIDERS = {
   google: {
     name: "Google",
-    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
   },
   // Future providers can be added here:

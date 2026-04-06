@@ -98,6 +98,16 @@ export function AuthButtonGroup() {
       {walletError && (
         <p className="text-xs text-destructive">{walletError}</p>
       )}
+
+      {/* Divider */}
+      <div className="relative flex items-center">
+        <div className="flex-1 border-t border-border" />
+        <span className="mx-2 text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t border-border" />
+      </div>
+
+      {/* zkLogin: Google */}
+      <LoginButton provider="google" className="w-full" />
     </div>
   );
 }

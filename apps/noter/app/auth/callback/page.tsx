@@ -5,26 +5,23 @@
 
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/feature/auth";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/shared/components/ui/alert";
 
 function AuthCallbackContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { completeLogin } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
-  const [hasRun, setHasRun] = useState(false);
+  const hasRun = useRef(false);
 
   useEffect(() => {
-    // Prevent infinite loop
-    if (hasRun) return;
+    if (hasRun.current) return;
 
     const handleCallback = async () => {
-      setHasRun(true);
+      hasRun.current = true;
 
       try {
         // Extract JWT from hash fragment (OpenID Connect response_type=id_token)
@@ -42,8 +39,7 @@ function AuthCallbackContent() {
         }
 
         // Complete the login flow
-        const result = await completeLogin(idToken, state);
-        setIsComplete(true);
+        await completeLogin(idToken, state);
 
         // Give React time to flush state updates to storage
         await new Promise(resolve => setTimeout(resolve, 200));

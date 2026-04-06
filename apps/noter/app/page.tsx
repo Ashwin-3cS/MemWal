@@ -6,9 +6,15 @@ import { Button } from "@/shared/components/ui/button";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [hasDelegateKey, setHasDelegateKey] = useState(true);
+
+  useEffect(() => {
+    setHasDelegateKey(!!localStorage.getItem("memwal_key"));
+  }, [isAuthenticated]);
 
   return (
     <main className="relative overflow-hidden">
@@ -56,7 +62,7 @@ export default function Home() {
               AI-powered note-taking on Sui blockchain
             </motion.p>
 
-            {isAuthenticated && (
+            {isAuthenticated && hasDelegateKey && (
               <motion.div
                 className="mt-8"
                 initial={{ opacity: 0, scale: 0 }}
@@ -66,6 +72,22 @@ export default function Home() {
                 <Button asChild size="lg">
                   <Link href="/note">Take Notes</Link>
                 </Button>
+              </motion.div>
+            )}
+
+            {isAuthenticated && !hasDelegateKey && (
+              <motion.div
+                className="mt-8 flex flex-col items-center gap-3"
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+              >
+                <Button asChild size="lg">
+                  <Link href="/setup">Setup MemWal Access</Link>
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Create your delegate key to start saving memories
+                </p>
               </motion.div>
             )}
 
