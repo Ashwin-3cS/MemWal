@@ -82,7 +82,9 @@ export const authRouter = router({
         });
 
         // Build OAuth URL
-        const defaultRedirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
+        const defaultRedirectUri =
+          process.env.NEXT_PUBLIC_REDIRECT_URL ||
+          `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
         const authUrl = buildOAuthUrl({
           authUrl: providerConfig.authUrl,
           clientId: providerConfig.clientId,

@@ -6,15 +6,7 @@
 "use client";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
-import { ChevronDown, Loader2, Wallet } from "lucide-react";
+import { Loader2, Wallet } from "lucide-react";
 import { useState } from "react";
 import { WALLET_INSTALL_URLS, type WalletType } from "../constant";
 import { useAuth } from "../hook/use-auth";
@@ -27,7 +19,6 @@ import {
 import { LoginButton } from "./login-button";
 
 export function AuthButtonGroup() {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isWalletConnecting, setIsWalletConnecting] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const { connectWalletAuth, isLoginPending } = useAuth();
@@ -38,13 +29,11 @@ export function AuthButtonGroup() {
     // If wallet not installed, open install URL
     if (!slushInstalled) {
       window.open(WALLET_INSTALL_URLS[walletType], "_blank");
-      setDropdownOpen(false);
       return;
     }
 
     setWalletError(null);
     setIsWalletConnecting(true);
-    setDropdownOpen(false);
 
     try {
       // 1. Connect to wallet
@@ -98,6 +87,14 @@ export function AuthButtonGroup() {
       {walletError && (
         <p className="text-xs text-destructive">{walletError}</p>
       )}
+
+      <div className="relative flex items-center">
+        <div className="flex-1 border-t border-border" />
+        <span className="mx-2 text-xs text-muted-foreground">or</span>
+        <div className="flex-1 border-t border-border" />
+      </div>
+
+      <LoginButton provider="google" className="w-full" />
     </div>
   );
 }
